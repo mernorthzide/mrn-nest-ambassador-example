@@ -6,3 +6,18 @@ services:
       - '3000:3000'
     volumes:
       - .:/app
+    depends_on:
+      - db
+
+  db:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: ambassador
+      MYSQL_USER: mysql_user
+      MYSQL_PASSWORD: mysql_password
+      MYSQL_ROOT_PASSWORD: mysql_root_password
+    volumes:
+      - .dbdata:/var/lib/mysql
+    ports:
+      - '3306:3306'
