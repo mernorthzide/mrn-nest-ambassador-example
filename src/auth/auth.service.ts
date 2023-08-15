@@ -13,4 +13,10 @@ export class AuthService {
   register(registerDto: RegisterDto) {
     return this.userRepository.save(registerDto);
   }
+
+  getUserByEmail(email: string) {
+    return this.userRepository.findOne({
+      where: { email },
+    });
+  }
 }
