@@ -17,7 +17,7 @@ export class AuthController {
     }
 
     // Hash password
-    const hashed = await bcrypt.hash(registerDto.password, 10);
+    const hashed = await bcrypt.hash(registerDto.password, 12);
 
     return this.authService.register({
       ...data,
