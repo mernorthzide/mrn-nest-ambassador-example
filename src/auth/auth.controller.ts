@@ -2,17 +2,25 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   NotFoundException,
   Post,
+  Req,
+  Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcryptjs';
 import { LoginDto } from './dto/login.dto';
+import { JwtService } from '@nestjs/jwt';
+import { Response, Request } from 'express';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @Post('admin/register')
   async register(@Body() registerDto: RegisterDto) {
@@ -35,7 +43,10 @@ export class AuthController {
   }
 
   @Post('admin/login')
-  async login(@Body() loginDto: LoginDto) {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     // Get user
     const user = await this.authService.getUserByEmail(loginDto.email);
 
@@ -51,6 +62,23 @@ export class AuthController {
       throw new BadRequestException('Invalid credentials');
     }
 
-    return user;
+    // Generate token
+    const jwt = await this.jwtService.signAsync({ id: user.id });
+
+    // Set cookie
+    response.cookie('jwt', jwt, { httpOnly: true });
+
+    return {
+      message: 'Success',
+    };
+  }
+
+  @Get('admin/user')
+  async user(@Req() request: Request) {
+    const cookie = request.cookies['jwt'];
+
+    const { id } = await this.jwtService.verifyAsync(cookie);
+
+    return this.authService.getUserById(id);
   }
 }

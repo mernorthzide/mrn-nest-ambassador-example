@@ -19,4 +19,10 @@ export class AuthService {
       where: { email },
     });
   }
+
+  getUserById(id: number) {
+    return this.userRepository.findOne({
+      where: { id },
+    });
+  }
 }

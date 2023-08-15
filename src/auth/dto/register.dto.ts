@@ -14,7 +14,7 @@ export class RegisterDto {
   })
   last_name: string;
 
-  @ApiProperty({ description: 'Email' })
+  @ApiProperty({ description: 'Email', example: 'string@string.com' })
   @IsNotEmpty({
     message: 'Email is required',
   })
