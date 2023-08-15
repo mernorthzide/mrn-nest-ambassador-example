@@ -37,4 +37,7 @@ export class RegisterDto {
     message: 'Password confirm is required',
   })
   password_confirm: string;
+
+  @ApiProperty({ description: 'Is ambassador' })
+  is_ambassador: boolean;
 }
