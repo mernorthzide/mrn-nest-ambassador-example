@@ -11,8 +11,8 @@ export class AuthService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
-  register(registerDto: RegisterDto) {
-    return this.userRepository.save(registerDto);
+  register(options) {
+    return this.userRepository.save(options);
   }
 
   getUserByEmail(email: string) {

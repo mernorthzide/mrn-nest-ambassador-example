@@ -8,6 +8,7 @@ import {
   Post,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -31,8 +32,8 @@ export class AuthController {
     private readonly jwtService: JwtService,
   ) {}
 
-  @Post('admin/register')
-  async register(@Body() registerDto: RegisterDto) {
+  @Post(['admin/register', 'ambassador/register'])
+  async register(@Body() registerDto: RegisterDto, @Req() request: Request) {
     const { password_confirm, ...data } = registerDto;
 
     // Check confirm password
@@ -44,18 +45,23 @@ export class AuthController {
     const hashed = await bcrypt.hash(registerDto.password, 12);
 
     // Create user
-    return this.authService.register({
+    await this.authService.register({
       ...data,
       password: hashed,
       password_confirm: '',
-      is_ambassador: false,
+      is_ambassador: request.path.includes('ambassador') ? true : false,
     });
+
+    return {
+      message: 'Success',
+    };
   }
 
-  @Post('admin/login')
+  @Post(['admin/login', 'ambassador/login'])
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
+    @Req() request: Request,
   ) {
     // Get user
     const user = await this.authService.getUserByEmail(loginDto.email);
@@ -73,8 +79,18 @@ export class AuthController {
       throw new BadRequestException('Invalid credentials');
     }
 
+    // Check is ambassador
+    const is_ambassador = request.path.includes('ambassador') ? true : false;
+
+    if (is_ambassador && !user.is_ambassador) {
+      throw new UnauthorizedException();
+    }
+
     // Generate token
-    const jwt = await this.jwtService.signAsync({ id: user.id });
+    const jwt = await this.jwtService.signAsync({
+      id: user.id,
+      scope: is_ambassador ? 'ambassador' : 'admin',
+    });
 
     // Set cookie
     response.cookie('jwt', jwt, { httpOnly: true });
@@ -85,7 +101,7 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard)
-  @Get('admin/user')
+  @Get(['admin/user', 'ambassador/user'])
   async user(@Req() request: Request) {
     // Get cookie
     const cookie = request.cookies['jwt'];
@@ -98,7 +114,7 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard)
-  @Post('admin/logout')
+  @Post(['admin/logout', 'ambassador/logout'])
   async logout(@Res({ passthrough: true }) response: Response) {
     // Clear cookie
     response.clearCookie('jwt');
@@ -109,7 +125,7 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard)
-  @Post('admin/users/info')
+  @Post(['admin/users/info', 'ambassador/users/info'])
   async updateInfo(
     @Req() request: Request,
     @Body() updateInfoDto: UpdateInfoDto,
@@ -128,7 +144,7 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard)
-  @Post('admin/users/password')
+  @Post(['admin/users/password', 'ambassador/users/password'])
   async updatePassword(
     @Req() request: Request,
     @Body() updatePasswordDto: UpdatePasswordDto,
