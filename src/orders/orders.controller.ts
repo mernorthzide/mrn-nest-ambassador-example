@@ -8,6 +8,7 @@ import {
   Delete,
   UseInterceptors,
   ClassSerializerInterceptor,
+  UseGuards,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -16,10 +17,12 @@ import { randomInt } from 'crypto';
 import { faker } from '@faker-js/faker';
 import { ApiTags } from '@nestjs/swagger';
 import { OrderItemsService } from 'src/order-items/order-items.service';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @ApiTags('Orders')
 @Controller('orders')
 @UseInterceptors(ClassSerializerInterceptor)
+@UseGuards(AuthGuard)
 export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,

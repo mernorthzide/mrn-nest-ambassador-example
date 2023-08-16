@@ -9,6 +9,7 @@ import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
 import { OrderItemsModule } from './order-items/order-items.module';
 import { LinksModule } from './links/links.module';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { LinksModule } from './links/links.module';
     OrdersModule,
     OrderItemsModule,
     LinksModule,
+    SharedModule,
   ],
   controllers: [AppController],
   providers: [AppService],
