@@ -18,6 +18,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { Response, Request } from 'express';
 import { AuthGuard } from './auth.guard';
+import { UpdateInfoDto } from './dto/update-info.dto';
 
 @Controller('auth')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -39,6 +40,7 @@ export class AuthController {
     // Hash password
     const hashed = await bcrypt.hash(registerDto.password, 12);
 
+    // Create user
     return this.authService.register({
       ...data,
       password: hashed,
@@ -63,6 +65,7 @@ export class AuthController {
     // Check password
     const isMatch = await bcrypt.compare(loginDto.password, user.password);
 
+    // Check match
     if (!isMatch) {
       throw new BadRequestException('Invalid credentials');
     }
@@ -81,20 +84,44 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @Get('admin/user')
   async user(@Req() request: Request) {
+    // Get cookie
     const cookie = request.cookies['jwt'];
 
+    // Verify cookie
     const { id } = await this.jwtService.verifyAsync(cookie);
 
+    // Get user
     return this.authService.getUserById(id);
   }
 
   @UseGuards(AuthGuard)
   @Post('admin/logout')
   async logout(@Res({ passthrough: true }) response: Response) {
+    // Clear cookie
     response.clearCookie('jwt');
 
     return {
       message: 'Success',
     };
+  }
+
+  // Update Info
+  @UseGuards(AuthGuard)
+  @Post('admin/users/info')
+  async updateInfo(
+    @Req() request: Request,
+    @Body() updateInfoDto: UpdateInfoDto,
+  ) {
+    // Get cookie
+    const cookie = request.cookies['jwt'];
+
+    // Verify cookie
+    const { id } = await this.jwtService.verifyAsync(cookie);
+
+    // Update user
+    await this.authService.updateUserById(id, updateInfoDto);
+
+    // Get user
+    return this.authService.getUserById(id);
   }
 }

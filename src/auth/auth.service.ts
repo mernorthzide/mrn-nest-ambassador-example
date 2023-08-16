@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateInfoDto } from './dto/update-info.dto';
 
 @Injectable()
 export class AuthService {
@@ -24,5 +25,9 @@ export class AuthService {
     return this.userRepository.findOne({
       where: { id },
     });
+  }
+
+  updateUserById(id: number, updateInfoDto: UpdateInfoDto) {
+    return this.userRepository.update(id, updateInfoDto);
   }
 }
