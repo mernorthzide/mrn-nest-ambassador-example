@@ -31,7 +31,6 @@ export class AuthService {
     return this.userRepository.update(id, updateInfoDto);
   }
 
-  // Update user's password
   updateUserPassword(id: number, password: string) {
     return this.userRepository.update(id, { password });
   }
