@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
 import { OrderItemsModule } from './order-items/order-items.module';
+import { LinksModule } from './links/links.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { OrderItemsModule } from './order-items/order-items.module';
     ProductsModule,
     OrdersModule,
     OrderItemsModule,
+    LinksModule,
   ],
   controllers: [AppController],
   providers: [AppService],
