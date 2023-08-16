@@ -84,4 +84,13 @@ export class AuthController {
 
     return this.authService.getUserById(id);
   }
+
+  @Post('admin/logout')
+  async logout(@Res({ passthrough: true }) response: Response) {
+    response.clearCookie('jwt');
+
+    return {
+      message: 'Success',
+    };
+  }
 }
