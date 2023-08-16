@@ -1,3 +1,4 @@
+import { UsersService } from './../users/users.service';
 import {
   BadRequestException,
   Body,
@@ -29,6 +30,7 @@ import { ApiTags } from '@nestjs/swagger';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -45,7 +47,7 @@ export class AuthController {
     const hashed = await bcrypt.hash(registerDto.password, 12);
 
     // Create user
-    await this.authService.register({
+    await this.usersService.create({
       ...data,
       password: hashed,
       password_confirm: '',
@@ -64,7 +66,9 @@ export class AuthController {
     @Req() request: Request,
   ) {
     // Get user
-    const user = await this.authService.getUserByEmail(loginDto.email);
+    const user = await this.usersService.findOne({
+      where: { email: loginDto.email },
+    });
 
     // Check user
     if (!user) {
@@ -109,8 +113,25 @@ export class AuthController {
     // Verify cookie
     const { id } = await this.jwtService.verifyAsync(cookie);
 
+    // Check admin
+    if (request.path.includes('admin')) {
+      return this.usersService.findOne({
+        where: { id },
+      });
+    }
+
     // Get user
-    return this.authService.getUserById(id);
+    const user = await this.usersService.findOne({
+      where: { id },
+      relations: ['orders', 'orders.order_items'],
+    });
+
+    const { orders, password, ...data } = user;
+
+    return {
+      ...data,
+      revenue: user.revenue,
+    };
   }
 
   @UseGuards(AuthGuard)
@@ -137,10 +158,12 @@ export class AuthController {
     const { id } = await this.jwtService.verifyAsync(cookie);
 
     // Update user
-    await this.authService.updateUserById(id, updateInfoDto);
+    await this.usersService.update(id, updateInfoDto);
 
     // Get user
-    return this.authService.getUserById(id);
+    return this.usersService.findOne({
+      where: { id },
+    });
   }
 
   @UseGuards(AuthGuard)
@@ -164,7 +187,9 @@ export class AuthController {
     const hashed = await bcrypt.hash(updatePasswordDto.password, 12);
 
     // Update user password
-    await this.authService.updateUserPassword(id, hashed);
+    await this.usersService.update(id, {
+      password: hashed,
+    });
 
     return {
       message: 'Success',

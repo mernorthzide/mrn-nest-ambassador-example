@@ -10,28 +10,4 @@ export class AuthService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
-
-  register(options) {
-    return this.userRepository.save(options);
-  }
-
-  getUserByEmail(email: string) {
-    return this.userRepository.findOne({
-      where: { email },
-    });
-  }
-
-  getUserById(id: number) {
-    return this.userRepository.findOne({
-      where: { id },
-    });
-  }
-
-  updateUserById(id: number, updateInfoDto: UpdateInfoDto) {
-    return this.userRepository.update(id, updateInfoDto);
-  }
-
-  updateUserPassword(id: number, password: string) {
-    return this.userRepository.update(id, { password });
-  }
 }
