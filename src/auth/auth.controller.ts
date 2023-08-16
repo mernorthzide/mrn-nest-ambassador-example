@@ -19,6 +19,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Response, Request } from 'express';
 import { AuthGuard } from './auth.guard';
 import { UpdateInfoDto } from './dto/update-info.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Controller('auth')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -105,7 +106,6 @@ export class AuthController {
     };
   }
 
-  // Update Info
   @UseGuards(AuthGuard)
   @Post('admin/users/info')
   async updateInfo(
@@ -123,5 +123,33 @@ export class AuthController {
 
     // Get user
     return this.authService.getUserById(id);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('admin/users/password')
+  async updatePassword(
+    @Req() request: Request,
+    @Body() updatePasswordDto: UpdatePasswordDto,
+  ) {
+    // Check confirm password
+    if (updatePasswordDto.password !== updatePasswordDto.password_confirm) {
+      throw new BadRequestException('Password and confirm password not match');
+    }
+
+    // Get cookie
+    const cookie = request.cookies['jwt'];
+
+    // Verify cookie
+    const { id } = await this.jwtService.verifyAsync(cookie);
+
+    // Hash password
+    const hashed = await bcrypt.hash(updatePasswordDto.password, 12);
+
+    // Update user password
+    await this.authService.updateUserPassword(id, hashed);
+
+    return {
+      message: 'Success',
+    };
   }
 }
