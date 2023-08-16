@@ -20,7 +20,9 @@ import { Response, Request } from 'express';
 import { AuthGuard } from './auth.guard';
 import { UpdateInfoDto } from './dto/update-info.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Auth')
 @Controller('auth')
 @UseInterceptors(ClassSerializerInterceptor)
 export class AuthController {
