@@ -161,16 +161,19 @@ export class ProductsController {
     }
 
     // Pagination
-    if (query.page && query.limit) {
-      const page = parseInt(query.page.toString());
-      const limit = parseInt(query.limit.toString());
+    const total = products.length;
+    const page = query.page ? parseInt(query.page.toString()) : 1;
+    const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
 
-      const startIndex = (page - 1) * limit;
-      const endIndex = page * limit;
+    products = products.slice(startIndex, endIndex);
 
-      products = products.slice(startIndex, endIndex);
-    }
-
-    return products;
+    return {
+      total,
+      page,
+      last_page: Math.ceil(total / limit),
+      data: products,
+    };
   }
 }
