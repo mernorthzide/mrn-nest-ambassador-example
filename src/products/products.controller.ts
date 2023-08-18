@@ -23,45 +23,72 @@ import {
   CacheTTL,
 } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @ApiTags('Products')
-@Controller('products')
-@UseGuards(AuthGuard)
+@Controller()
 export class ProductsController {
   constructor(
     private readonly productsService: ProductsService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private eventEmitter: EventEmitter2,
   ) {}
 
-  @Post()
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto);
+  @UseGuards(AuthGuard)
+  @Post('admin/products')
+  async create(@Body() createProductDto: CreateProductDto) {
+    const product = await this.productsService.create(createProductDto);
+
+    // Emit event
+    this.eventEmitter.emit('product_updated');
+
+    return product;
   }
 
-  @Get()
+  @UseGuards(AuthGuard)
+  @Get('admin/products')
   findAll() {
     return this.productsService.findAll();
   }
 
-  @Get(':id')
+  @UseGuards(AuthGuard)
+  @Get('admin/products/:id')
   findOne(@Param('id') id: string) {
     return this.productsService.findOne({
       where: { id: +id },
     });
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productsService.update(+id, updateProductDto);
+  @UseGuards(AuthGuard)
+  @Patch('admin/products/:id')
+  async update(
+    @Param('id') id: string,
+    @Body() updateProductDto: UpdateProductDto,
+  ) {
+    await this.productsService.update(+id, updateProductDto);
+
+    // Emit event
+    this.eventEmitter.emit('product_updated');
+
+    return this.productsService.findOne({
+      where: { id: +id },
+    });
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.productsService.remove(+id);
+  @UseGuards(AuthGuard)
+  @Delete('admin/products/:id')
+  async remove(@Param('id') id: string) {
+    const response = await this.productsService.remove(+id);
+
+    // Emit event
+    this.eventEmitter.emit('product_updated');
+
+    return response;
   }
 
   // Generate fake data
-  @Get('generate-fake-data/:number')
+  @UseGuards(AuthGuard)
+  @Get('admin/products/generate-fake-data/:number')
   async generateFakeData(@Param('number') number: number) {
     // Create products
     for (let i = 0; i < number; i++) {
@@ -89,10 +116,6 @@ export class ProductsController {
   @Get('ambassador/products/backend')
   async backEnd() {
     let products = await this.cacheManager.get('products_backend');
-    console.log(
-      '🚀 ~ file: products.controller.ts:93 ~ ProductsController ~ backEnd ~ products:',
-      products,
-    );
 
     if (!products) {
       products = await this.productsService.findAll();
