@@ -1,13 +1,22 @@
+import { UsersService } from './../users/users.service';
+import { JwtService } from '@nestjs/jwt';
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { User } from 'src/users/entities/user.entity';
-import { Repository } from 'typeorm';
-import { RegisterDto } from './dto/register.dto';
-import { UpdateInfoDto } from './dto/update-info.dto';
+import { Request } from 'express';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User) private readonly userRepository: Repository<User>,
+    private jwtService: JwtService,
+    private UsersService: UsersService,
   ) {}
+
+  async user(request: Request) {
+    const cookie = request.cookies['jwt'];
+
+    const { id } = await this.jwtService.verifyAsync(cookie);
+
+    return this.UsersService.findOne({
+      where: { id },
+    });
+  }
 }
