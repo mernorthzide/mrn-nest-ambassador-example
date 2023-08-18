@@ -160,6 +160,17 @@ export class ProductsController {
       }
     }
 
+    // Pagination
+    if (query.page && query.limit) {
+      const page = parseInt(query.page.toString());
+      const limit = parseInt(query.limit.toString());
+
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+
+      products = products.slice(startIndex, endIndex);
+    }
+
     return products;
   }
 }
