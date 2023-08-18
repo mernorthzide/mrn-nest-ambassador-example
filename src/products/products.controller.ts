@@ -9,6 +9,8 @@ import {
   UseGuards,
   UseInterceptors,
   Inject,
+  Res,
+  Query,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -24,6 +26,8 @@ import {
 } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Request } from 'express';
+import { Product } from './entities/product.entity';
 
 @ApiTags('Products')
 @Controller()
@@ -114,15 +118,31 @@ export class ProductsController {
   }
 
   @Get('ambassador/products/backend')
-  async backEnd() {
-    let products = await this.cacheManager.get('products_backend');
+  async backEnd(@Query() query) {
+    // Get products from cache
+    let products = await this.cacheManager.get<Product[]>('products_backend');
 
+    // If not found in cache
     if (!products) {
+      // Get products from database
       products = await this.productsService.findAll();
 
+      // Set products to cache
       await this.cacheManager.set('products_backend', products, {
         ttl: 1800,
       } as any);
+    }
+
+    // Search
+    if (query.s) {
+      const s = query.s.toString().toLowerCase();
+
+      products = products.filter((product) => {
+        return (
+          product.title.toLowerCase().includes(s) ||
+          product.description.toLowerCase().includes(s)
+        );
+      });
     }
 
     return products;
