@@ -1,0 +1,3 @@
+WARNING 2023-08-17 07:06:26,533 django.request Bad Request: /api/instance/
+WARNING 2023-08-17 07:06:39,081 django.request Bad Request: /api/instance/
+WARNING 2023-08-17 07:06:46,283 django.request Bad Request: /api/instance/
