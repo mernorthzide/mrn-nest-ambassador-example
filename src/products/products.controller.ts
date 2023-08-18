@@ -145,6 +145,21 @@ export class ProductsController {
       });
     }
 
+    // Sort by price
+    if (query.sort) {
+      const sort = query.sort.toString().toLowerCase();
+
+      if (sort === 'asc') {
+        products = products.sort((a, b) => {
+          return a.price - b.price;
+        });
+      } else if (sort === 'desc') {
+        products = products.sort((a, b) => {
+          return b.price - a.price;
+        });
+      }
+    }
+
     return products;
   }
 }
