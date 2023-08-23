@@ -58,7 +58,21 @@ export class UsersController {
       '-inf',
       'withscores',
       (err, result) => {
-        response.send(result);
+        let score;
+
+        response.send(
+          result.reduce((o, r) => {
+            if (isNaN(parseInt(r))) {
+              return {
+                ...o,
+                [r]: score,
+              };
+            } else {
+              score = parseInt(r);
+              return o;
+            }
+          }, {}),
+        );
       },
     );
   }
