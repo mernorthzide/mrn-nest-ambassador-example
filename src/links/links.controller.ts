@@ -1,11 +1,13 @@
 import {
   Body,
+  ClassSerializerInterceptor,
   Controller,
   Get,
   Param,
   Post,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { LinksService } from './links.service';
 import { ApiTags } from '@nestjs/swagger';
@@ -18,6 +20,7 @@ import { Order } from 'src/orders/entities/order.entity';
 
 @ApiTags('Link')
 @Controller()
+@UseInterceptors(ClassSerializerInterceptor)
 export class LinksController {
   constructor(
     private readonly linksService: LinksService,
