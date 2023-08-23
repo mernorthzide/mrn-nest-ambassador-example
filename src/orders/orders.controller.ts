@@ -1,65 +1,92 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
-  Delete,
   UseInterceptors,
   ClassSerializerInterceptor,
   UseGuards,
+  Post,
+  Body,
+  BadRequestException,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
 import { randomInt } from 'crypto';
 import { faker } from '@faker-js/faker';
 import { ApiTags } from '@nestjs/swagger';
 import { OrderItemsService } from 'src/order-items/order-items.service';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { LinksService } from 'src/links/links.service';
+import { Order } from './entities/order.entity';
+import { ProductsService } from 'src/products/products.service';
+import { Product } from 'src/products/entities/product.entity';
+import { OrderItem } from 'src/order-items/entities/order-item.entity';
 
 @ApiTags('Orders')
-@Controller('orders')
-@UseInterceptors(ClassSerializerInterceptor)
-@UseGuards(AuthGuard)
+@Controller()
 export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
     private readonly orderItemsService: OrderItemsService,
+    private readonly linksService: LinksService,
+    private readonly productsService: ProductsService,
   ) {}
 
-  @Post()
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.create(createOrderDto);
-  }
-
-  @Get()
-  findAll() {
+  @UseGuards(AuthGuard)
+  @UseInterceptors(ClassSerializerInterceptor)
+  @Get('admin/orders')
+  all() {
     return this.ordersService.findAll({
       relations: ['order_items'],
     });
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne({
-      where: { id: +id },
+  @Post('checkout/orders')
+  async create(@Body() createOrderDto: CreateOrderDto) {
+    const link = await this.linksService.findOne({
+      where: { code: createOrderDto.code },
+      relations: ['user'],
     });
-  }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(+id, updateOrderDto);
-  }
+    if (!link) {
+      throw new BadRequestException('Invalid link');
+    }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ordersService.remove(+id);
+    const o = new Order();
+    o.user_id = link.user.id;
+    o.ambassador_email = link.user.email;
+    o.first_name = createOrderDto.first_name;
+    o.last_name = createOrderDto.last_name;
+    o.email = createOrderDto.email;
+    o.address = createOrderDto.address;
+    o.country = createOrderDto.country;
+    o.city = createOrderDto.city;
+    o.zip = createOrderDto.zip;
+    o.code = createOrderDto.code;
+
+    const order = await this.ordersService.create(o);
+
+    for (const p of createOrderDto.products) {
+      const product: Product = await this.productsService.findOne({
+        where: { id: p.product_id },
+      });
+
+      const orderItem = new OrderItem();
+      orderItem.order = order;
+      orderItem.product_title = product.title;
+      orderItem.price = product.price;
+      orderItem.quantity = p.quantity;
+      orderItem.ambassador_revenue = 0.1 * product.price * p.quantity;
+      orderItem.admin_revenue = 0.9 * product.price * p.quantity;
+
+      await this.orderItemsService.create(orderItem);
+    }
+
+    return order;
   }
 
   // Generate fake data
-  @Get('generate-fake-data/:number')
+  @Get('orders/generate-fake-data/:number')
   async generateFakeData(@Param('number') number: number) {
     // Create products
     for (let i = 0; i < number; i++) {
