@@ -4,6 +4,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import * as redisStore from 'cache-manager-redis-store';
 import type { RedisClientOptions } from 'redis';
+import { RedisService } from './redis.service';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import type { RedisClientOptions } from 'redis';
       port: 6379,
     }),
   ],
-  exports: [JwtModule, CacheModule],
+  providers: [RedisService],
+  exports: [JwtModule, CacheModule, RedisService],
 })
 export class SharedModule {}

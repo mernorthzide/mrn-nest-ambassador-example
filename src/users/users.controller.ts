@@ -1,27 +1,21 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { RedisService } from './../shared/redis.service';
+import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { ApiTags } from '@nestjs/swagger';
 import { faker } from '@faker-js/faker';
 import * as bcrypt from 'bcryptjs';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { User } from './entities/user.entity';
+import { Response } from 'express';
 
 @ApiTags('Users')
 @Controller()
 @UseGuards(AuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly redisService: RedisService,
+  ) {}
 
   @Get('amin/ambassadors')
   getAmbassadors() {
@@ -31,50 +25,6 @@ export class UsersController {
       },
     });
   }
-
-  @Get('ambassador/rankings')
-  async rankings() {
-    const ambassadors: User[] = await this.usersService.findAll({
-      where: {
-        is_ambassador: true,
-      },
-      relations: ['orders', 'orders.order_items'],
-    });
-
-    return ambassadors.map((ambassador) => {
-      return {
-        name: ambassador.name,
-        revenue: ambassador.revenue,
-      };
-    });
-  }
-
-  // @Post()
-  // create(@Body() createUserDto: CreateUserDto) {
-  //   return this.usersService.create(createUserDto);
-  // }
-
-  // @Get()
-  // findAll() {
-  //   return this.usersService.findAll();
-  // }
-
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.usersService.findOne({
-  //     where: { id: +id },
-  //   });
-  // }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-  //   return this.usersService.update(+id, updateUserDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.usersService.remove(+id);
-  // }
 
   // Generate fake data
   @Get('generate-fake-data/:number')
@@ -95,6 +45,46 @@ export class UsersController {
 
     return {
       message: number + ' users created',
+    };
+  }
+
+  @Get('ambassador/rankings')
+  async rankings(@Res() response: Response) {
+    const client = this.redisService.getClient();
+
+    client.zrevrangebyscore(
+      'rankings',
+      '+inf',
+      '-inf',
+      'withscores',
+      (err, result) => {
+        response.send(result);
+      },
+    );
+  }
+
+  // Generate fake data
+  @Get('ambassador/generate-fake-data/rankings')
+  async generateFakeDataRankings() {
+    const ambassadors: User[] = await this.usersService.findAll({
+      where: {
+        is_ambassador: true,
+      },
+      relations: ['orders', 'orders.order_items'],
+    });
+
+    const client = this.redisService.getClient();
+
+    for (let i = 0; i < ambassadors.length; i++) {
+      await client.zadd(
+        'rankings',
+        ambassadors[i].revenue,
+        ambassadors[i].name,
+      );
+    }
+
+    return {
+      message: 'rankings created',
     };
   }
 }
