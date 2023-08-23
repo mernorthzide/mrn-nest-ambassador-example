@@ -13,6 +13,8 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { AuthService } from 'src/auth/auth.service';
 import { Request } from 'express';
 import { CreateLinkDto } from './dto/create-link.dto';
+import { Link } from './entities/link.entity';
+import { Order } from 'src/orders/entities/order.entity';
 
 @ApiTags('Link')
 @Controller()
@@ -40,6 +42,27 @@ export class LinksController {
       code: Math.random().toString(36).substring(6),
       user: user.id,
       products: createLinkDto.products.map((id) => ({ id })),
+    });
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('ambassador/stats')
+  async stats(@Req() request: Request) {
+    const user = await this.authService.user(request);
+
+    const links: Link[] = await this.linksService.findAll({
+      where: { user: user.id },
+      relations: ['orders'],
+    });
+
+    return links.map((link) => {
+      const completedOrders: Order[] = link.orders.filter((o) => o.complete);
+
+      return {
+        code: link.code,
+        count: completedOrders.length,
+        revenue: completedOrders.reduce((a, b) => a + b.ambassador_revenue, 0),
+      };
     });
   }
 }

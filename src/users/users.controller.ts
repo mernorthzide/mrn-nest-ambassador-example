@@ -15,14 +15,15 @@ import * as bcrypt from 'bcryptjs';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { User } from './entities/user.entity';
 
 @ApiTags('Users')
-@Controller('users')
+@Controller()
 @UseGuards(AuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get('ambassadors')
+  @Get('amin/ambassadors')
   getAmbassadors() {
     return this.usersService.findAll({
       where: {
@@ -31,32 +32,49 @@ export class UsersController {
     });
   }
 
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
-  }
+  @Get('ambassador/rankings')
+  async rankings() {
+    const ambassadors: User[] = await this.usersService.findAll({
+      where: {
+        is_ambassador: true,
+      },
+      relations: ['orders', 'orders.order_items'],
+    });
 
-  @Get()
-  findAll() {
-    return this.usersService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne({
-      where: { id: +id },
+    return ambassadors.map((ambassador) => {
+      return {
+        name: ambassador.name,
+        revenue: ambassador.revenue,
+      };
     });
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
-  }
+  // @Post()
+  // create(@Body() createUserDto: CreateUserDto) {
+  //   return this.usersService.create(createUserDto);
+  // }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
-  }
+  // @Get()
+  // findAll() {
+  //   return this.usersService.findAll();
+  // }
+
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.usersService.findOne({
+  //     where: { id: +id },
+  //   });
+  // }
+
+  // @Patch(':id')
+  // update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  //   return this.usersService.update(+id, updateUserDto);
+  // }
+
+  // @Delete(':id')
+  // remove(@Param('id') id: string) {
+  //   return this.usersService.remove(+id);
+  // }
 
   // Generate fake data
   @Get('generate-fake-data/:number')

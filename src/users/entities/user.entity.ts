@@ -33,4 +33,8 @@ export class User {
       return acc + order.ambassador_revenue;
     }, 0);
   }
+
+  get name() {
+    return `${this.first_name} ${this.last_name}`;
+  }
 }
