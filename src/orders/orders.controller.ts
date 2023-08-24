@@ -21,15 +21,17 @@ import { Order } from './entities/order.entity';
 import { ProductsService } from 'src/products/products.service';
 import { Product } from 'src/products/entities/product.entity';
 import { OrderItem } from 'src/order-items/entities/order-item.entity';
+import { Connection } from 'typeorm';
 
 @ApiTags('Orders')
 @Controller()
 export class OrdersController {
   constructor(
-    private readonly ordersService: OrdersService,
-    private readonly orderItemsService: OrderItemsService,
-    private readonly linksService: LinksService,
-    private readonly productsService: ProductsService,
+    private ordersService: OrdersService,
+    private orderItemsService: OrderItemsService,
+    private linksService: LinksService,
+    private productsService: ProductsService,
+    private connection: Connection,
   ) {}
 
   @UseGuards(AuthGuard)
@@ -52,37 +54,61 @@ export class OrdersController {
       throw new BadRequestException('Invalid link');
     }
 
-    const o = new Order();
-    o.user_id = link.user.id;
-    o.ambassador_email = link.user.email;
-    o.first_name = createOrderDto.first_name;
-    o.last_name = createOrderDto.last_name;
-    o.email = createOrderDto.email;
-    o.address = createOrderDto.address;
-    o.country = createOrderDto.country;
-    o.city = createOrderDto.city;
-    o.zip = createOrderDto.zip;
-    o.code = createOrderDto.code;
+    // Creare query runner
+    const queryRunner = this.connection.createQueryRunner();
 
-    const order = await this.ordersService.create(o);
+    try {
+      // Connect to database
+      await queryRunner.connect();
 
-    for (const p of createOrderDto.products) {
-      const product: Product = await this.productsService.findOne({
-        where: { id: p.product_id },
-      });
+      // Start transaction
+      await queryRunner.startTransaction();
 
-      const orderItem = new OrderItem();
-      orderItem.order = order;
-      orderItem.product_title = product.title;
-      orderItem.price = product.price;
-      orderItem.quantity = p.quantity;
-      orderItem.ambassador_revenue = 0.1 * product.price * p.quantity;
-      orderItem.admin_revenue = 0.9 * product.price * p.quantity;
+      // order
+      const o = new Order();
+      o.user_id = link.user.id;
+      o.ambassador_email = link.user.email;
+      o.first_name = createOrderDto.first_name;
+      o.last_name = createOrderDto.last_name;
+      o.email = createOrderDto.email;
+      o.address = createOrderDto.address;
+      o.country = createOrderDto.country;
+      o.city = createOrderDto.city;
+      o.zip = createOrderDto.zip;
+      o.code = createOrderDto.code;
 
-      await this.orderItemsService.create(orderItem);
+      // Save order
+      const order = await queryRunner.manager.save(o);
+
+      // order items
+      for (const p of createOrderDto.products) {
+        // Get product
+        const product: Product = await this.productsService.findOne({
+          where: { id: p.product_id },
+        });
+
+        //
+        const orderItem = new OrderItem();
+        orderItem.order = order;
+        orderItem.product_title = product.title;
+        orderItem.price = product.price;
+        orderItem.quantity = p.quantity;
+        orderItem.ambassador_revenue = 0.1 * product.price * p.quantity;
+        orderItem.admin_revenue = 0.9 * product.price * p.quantity;
+
+        await queryRunner.manager.save(orderItem);
+      }
+
+      await queryRunner.commitTransaction();
+
+      return order;
+    } catch (e) {
+      await queryRunner.rollbackTransaction();
+
+      throw new BadRequestException(e.message);
+    } finally {
+      await queryRunner.release();
     }
-
-    return order;
   }
 
   // Generate fake data
