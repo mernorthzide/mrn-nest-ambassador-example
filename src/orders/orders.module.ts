@@ -8,6 +8,8 @@ import { OrderItem } from 'src/order-items/entities/order-item.entity';
 import { SharedModule } from 'src/shared/shared.module';
 import { LinksModule } from 'src/links/links.module';
 import { ProductsModule } from 'src/products/products.module';
+import { StripeModule } from 'nestjs-stripe';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -15,6 +17,13 @@ import { ProductsModule } from 'src/products/products.module';
     SharedModule,
     LinksModule,
     ProductsModule,
+    StripeModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        apiKey: configService.get('STRIPE_API_KEY'),
+        apiVersion: '2020-08-27',
+      }),
+    }),
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrderItemsService],

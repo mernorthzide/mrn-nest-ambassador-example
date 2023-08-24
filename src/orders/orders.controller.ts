@@ -22,6 +22,9 @@ import { ProductsService } from 'src/products/products.service';
 import { Product } from 'src/products/entities/product.entity';
 import { OrderItem } from 'src/order-items/entities/order-item.entity';
 import { Connection } from 'typeorm';
+import { InjectStripe } from 'nestjs-stripe';
+import Stripe from 'stripe';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('Orders')
 @Controller()
@@ -32,6 +35,8 @@ export class OrdersController {
     private linksService: LinksService,
     private productsService: ProductsService,
     private connection: Connection,
+    @InjectStripe() private readonly stripeClient: Stripe,
+    private configService: ConfigService,
   ) {}
 
   @UseGuards(AuthGuard)
@@ -80,6 +85,9 @@ export class OrdersController {
       // Save order
       const order = await queryRunner.manager.save(o);
 
+      // line items
+      const line_items = [];
+
       // order items
       for (const p of createOrderDto.products) {
         // Get product
@@ -87,7 +95,7 @@ export class OrdersController {
           where: { id: p.product_id },
         });
 
-        //
+        // Create order item
         const orderItem = new OrderItem();
         orderItem.order = order;
         orderItem.product_title = product.title;
@@ -97,11 +105,35 @@ export class OrdersController {
         orderItem.admin_revenue = 0.9 * product.price * p.quantity;
 
         await queryRunner.manager.save(orderItem);
+
+        // Add line item
+        line_items.push({
+          name: product.title,
+          description: product.description,
+          images: [product.image],
+          amount: product.price * 100,
+          currency: 'usd',
+          quantity: p.quantity,
+        });
       }
+
+      // Create stripe session
+      const source = await this.stripeClient.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items,
+        success_url: `${this.configService.get(
+          'CHECKOUT_URL',
+        )}/success?source={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${this.configService.get('CHECKOUT_URL')}/error`,
+      });
+
+      // Update order
+      order.transaction_id = source.id;
+      await queryRunner.manager.save(order);
 
       await queryRunner.commitTransaction();
 
-      return order;
+      return source;
     } catch (e) {
       await queryRunner.rollbackTransaction();
 

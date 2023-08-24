@@ -15,7 +15,9 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 @Module({
   imports: [
     // Config
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     // Database
     TypeOrmModule.forRoot({
       type: process.env.DB_TYPE as any,
