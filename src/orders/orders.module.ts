@@ -10,6 +10,7 @@ import { LinksModule } from 'src/links/links.module';
 import { ProductsModule } from 'src/products/products.module';
 import { StripeModule } from 'nestjs-stripe';
 import { ConfigService } from '@nestjs/config';
+import { OrderListener } from './listeners/order.listener';
 
 @Module({
   imports: [
@@ -26,6 +27,6 @@ import { ConfigService } from '@nestjs/config';
     }),
   ],
   controllers: [OrdersController],
-  providers: [OrdersService, OrderItemsService],
+  providers: [OrdersService, OrderItemsService, OrderListener],
 })
 export class OrdersModule {}

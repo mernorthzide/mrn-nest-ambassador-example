@@ -8,6 +8,7 @@ import {
   Post,
   Body,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { randomInt } from 'crypto';
@@ -25,6 +26,8 @@ import { Connection } from 'typeorm';
 import { InjectStripe } from 'nestjs-stripe';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ConfirmOrderDto } from './dto/confirm-order.dto';
 
 @ApiTags('Orders')
 @Controller()
@@ -37,6 +40,7 @@ export class OrdersController {
     private connection: Connection,
     @InjectStripe() private readonly stripeClient: Stripe,
     private configService: ConfigService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   @UseGuards(AuthGuard)
@@ -59,7 +63,7 @@ export class OrdersController {
       throw new BadRequestException('Invalid link');
     }
 
-    // Creare query runner
+    // Create query runner
     const queryRunner = this.connection.createQueryRunner();
 
     try {
@@ -141,6 +145,32 @@ export class OrdersController {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  @Post('checkout/order/confirm')
+  async confirm(@Body() confirmOrderDto: ConfirmOrderDto) {
+    // Get order
+    const order = await this.ordersService.findOne({
+      where: { transaction_id: confirmOrderDto.source },
+      relations: ['order_items', 'user'],
+    });
+
+    // Check order
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Update order
+    await this.ordersService.update(order.id, {
+      complete: true,
+    });
+
+    // Emit event
+    await this.eventEmitter.emitAsync('order.completed', order);
+
+    return {
+      message: 'success',
+    };
   }
 
   // Generate fake data
